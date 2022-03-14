@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     if(!boost::filesystem::exists(output_folder))
         boost::filesystem::create_directory(output_folder);
 
-    f_out.open("test.txt");
+    f_out.open("lidar_timestamp.txt");
     
     char ebuf[PCAP_ERRBUF_SIZE];
     // 传到回调函数里两个参数，第一个参数是用来统计当前是第几个packet，第二个参数是当前packet的时间戳
@@ -104,10 +104,6 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
     size_t* counter = (size_t*)(args);
     double* last_timestamp = (double*)(args + sizeof(size_t));
     
-    // cout << "========================" << endl;
-
-    // cout << "packet length : " << header->len << ", caption length :" << header->caplen << endl;
-    // cout << "time stamp : " << header->ts.tv_sec << ", " << header->ts.tv_usec << endl;
     // 512 字节的是Position Packet，一般是外接了其他设备时候使用的，比如GPS IMU等
     // 这里只有雷达，所以直接跳过
     if(header->len != 1206 + SIZE_ETHERNET + SIZE_UDP + 20)
@@ -117,7 +113,9 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
     }
     double curr_timestamp = header->ts.tv_sec + header->ts.tv_usec / 1000000.0;
 
-
+    // 如果没给定初始的时间戳，那就把第一帧时间戳当做初始的
+    if(*last_timestamp <= 0)
+        *last_timestamp = curr_timestamp;
     /* 以太网头 */
     ethernet = (ethhdr*)(packet);
 
@@ -194,7 +192,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
             block_alpha += SEQUENCE_TIME / 1000000.0 * HORIZON_SPEED;
             curr_timestamp += SEQUENCE_TIME / 1000000.0;
             // 一旦超过了时间阈值，就保存一下点云
-            if(curr_timestamp - *last_timestamp > PCD_DURATION)
+            if(curr_timestamp - *last_timestamp >= PCD_DURATION)
             {
                 pcd_count ++;
                 cout << pcd_count << endl;
