@@ -49,9 +49,10 @@ string output_folder;
 int pcd_count = 0;
 ofstream f_out;
 
-
+int test = 1;
 int main(int argc, char** argv)
 {
+
     if(argc < 2)
     {
         cout << "usage: VLP-reader pcap_file [start_timestamp]" << endl;
