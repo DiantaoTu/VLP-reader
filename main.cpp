@@ -49,21 +49,21 @@ string output_folder;
 int pcd_count = 0;
 ofstream f_out;
 
-int test = 1;
 int main(int argc, char** argv)
 {
-
     if(argc < 2)
     {
-        cout << "usage: VLP-reader pcap_file [start_timestamp]" << endl;
+        cout << "usage: VLP-reader pcap_file [start_timestamp] [end_timestamp]" << endl;
         return 0;
     }
 
     double start_timestamp = 0;
+    double end_timestamp = numeric_limits<double>::max();
     if(argc > 2)
-    {
         start_timestamp = str2num<double>(string(argv[2]));
-    }
+    if(argc > 3)
+        end_timestamp = str2num<double>(string(argv[3]));
+    
     
     string::size_type pos = string(argv[1]).rfind('/');
     if(pos == -1)
@@ -77,8 +77,9 @@ int main(int argc, char** argv)
     
     char ebuf[PCAP_ERRBUF_SIZE];
     // 传到回调函数里两个参数，第一个参数是用来统计当前是第几个packet，第二个参数是当前packet的时间戳
-    u_char arg[sizeof(size_t) + sizeof(double)] = {0};
+    u_char arg[sizeof(size_t) + 2*sizeof(double)] = {0};
     *(double*)(arg + sizeof(size_t)) = start_timestamp;
+    *(double*)(arg + sizeof(size_t) + sizeof(double)) = end_timestamp;
     
     pcap_t *p = pcap_open_offline(argv[1], ebuf);
     struct pcap_pkthdr pkthdr;
@@ -104,6 +105,11 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
     int size_ip;        // ip 头的长度
     size_t* counter = (size_t*)(args);
     double* last_timestamp = (double*)(args + sizeof(size_t));
+    const double* end_timestamp = (double*)(args + sizeof(size_t) + sizeof(double));
+
+    // 如果上一帧结束之后的时间戳已经达到了设定的结尾，那么就直接return即可
+    if(*last_timestamp >= *end_timestamp)
+        return;
     
     // 512 字节的是Position Packet，一般是外接了其他设备时候使用的，比如GPS IMU等
     // 这里只有雷达，所以直接跳过
@@ -169,6 +175,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
             if(curr_timestamp < *last_timestamp)
             {
                 offset += 3 * SCANS;
+                curr_timestamp += SCANS * FIRING_CYCLE / 1000000.0;
                 goto next_block;
             }
             for(int laser_id = 0; laser_id < SCANS; laser_id++)
@@ -188,10 +195,22 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
                 pt.y = y;
                 pt.z = z;
                 cloud.push_back(pt);
+                curr_timestamp += FIRING_CYCLE / 1000000.0;
+                // 一旦超过了时间阈值，就保存一下点云
+                if(curr_timestamp - *last_timestamp >= PCD_DURATION)
+                {
+                    pcd_count ++;
+                    cout << pcd_count << endl;
+                    pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
+                    cloud.clear();
+                    f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << (*last_timestamp) << endl;
+
+                    *last_timestamp = curr_timestamp;
+                }
             }
             next_block:
             block_alpha += SEQUENCE_TIME / 1000000.0 * HORIZON_SPEED;
-            curr_timestamp += SEQUENCE_TIME / 1000000.0;
+            curr_timestamp += RECHARGEING_TIME / 1000000.0;
             // 一旦超过了时间阈值，就保存一下点云
             if(curr_timestamp - *last_timestamp >= PCD_DURATION)
             {
