@@ -190,7 +190,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
                 float x = distance * sin(point_alpha) * cos(vertical_angle[laser_id]);
                 float y = distance * cos(point_alpha) * cos(vertical_angle[laser_id]);
                 float z = distance * sin(vertical_angle[laser_id]);
-                z += vertical_correction[laser_id];
+                z += vertical_correction[laser_id] * 0.01;
                 pcl::PointXYZI pt(reflection);
                 pt.x = x;
                 pt.y = y;
