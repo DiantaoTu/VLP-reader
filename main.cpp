@@ -161,14 +161,14 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
     // 一共有12个block
     for(int block_id = 0; block_id < 12; block_id++)
     {
+        // 4字节，保存的是 标志位 0xFFEE 以及 角度
         // 注意这里的0xFFEE是低位 FF 高位 EE，因此在比较的时候，要反过来，因为高位在前，低位在后，所以是 0xEEFF
         assert(*(uint16_t*)(packet + offset) == 0xEEFF);
-        // 4字节，保存的是 标志位 0xFFEE 以及 角度
-        offset += 4;
         const uint16_t* angle = (uint16_t*)(packet + offset + 2);
         float block_alpha = *angle * 0.01;
         if(block_alpha >= 360.0)
             block_alpha -= 360.0; 
+        offset += 4;
         // 每个block里有2个sequence
         for(int seq_id = 0; seq_id < 2; seq_id ++)
         {
@@ -190,6 +190,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
                 float x = distance * sin(point_alpha) * cos(vertical_angle[laser_id]);
                 float y = distance * cos(point_alpha) * cos(vertical_angle[laser_id]);
                 float z = distance * sin(vertical_angle[laser_id]);
+                z += vertical_correction[laser_id];
                 pcl::PointXYZI pt(reflection);
                 pt.x = x;
                 pt.y = y;
