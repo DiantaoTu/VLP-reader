@@ -4,7 +4,7 @@
  */
 
 
-#define PCD_DURATION 0.1        // 每个pcd包含的扫描时间
+#define PCD_DURATION 0.09999397        // 每个pcd包含的扫描时间
 
 
 #define SCANS 16             // 雷达扫描线数

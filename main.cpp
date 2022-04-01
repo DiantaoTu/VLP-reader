@@ -216,7 +216,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
             if(curr_timestamp - *last_timestamp >= PCD_DURATION)
             {
                 pcd_count ++;
-                cout << pcd_count << endl;
+                cout << "lidar " << pcd_count << ", points " << cloud.size() << endl;
                 pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
                 cloud.clear();
                 f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << (*last_timestamp) << endl;
