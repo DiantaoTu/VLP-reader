@@ -48,6 +48,7 @@ pcl::PointCloud<pcl::PointXYZI> cloud;
 string output_folder;
 int pcd_count = 0;
 ofstream f_out;
+vector<string> error_messages;
 
 int main(int argc, char** argv)
 {
@@ -88,12 +89,19 @@ int main(int argc, char** argv)
     if(!cloud.empty())
     {
         pcd_count++;
-        cout << pcd_count << endl;
+        cout << "lidar " << pcd_count << ", points " << cloud.size() << endl;
         pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
         cloud.clear();
         f_out << "pcd : " << pcd_count << ".pcd, time stamp : " <<  *(double*)(arg + sizeof(size_t)) << endl;
+        f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << 
+            *(double*)(arg + sizeof(size_t)) << ", points " << cloud.size() << endl;
+        // 点云有时候不可靠，感觉像是LiDAR本身的问题，所以只能输出一下错误信息
+        if(cloud.size() < 15000)
+            error_messages.push_back("pcd file " + num2str(pcd_count) + ".pcd may be wrong, point cloud too small");
     }
     f_out.close();
+    for(const string error : error_messages)
+        cout << error << endl;
     return 0;
 }
 
@@ -201,11 +209,17 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
                 if(curr_timestamp - *last_timestamp >= PCD_DURATION)
                 {
                     pcd_count ++;
-                    cout << pcd_count << endl;
+                    cout << "lidar " << pcd_count << ", points " << cloud.size() << endl;
                     pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
+                    
+                    f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << 
+                            (*last_timestamp) << ", points " << cloud.size() << endl;
+                    // 点云有时候不可靠，感觉像是LiDAR本身的问题，所以只能输出一下错误信息
+                    if(cloud.size() < 15000)
+                        error_messages.push_back("pcd file " + num2str(pcd_count) + ".pcd may be wrong, point cloud too small");
+                    if(curr_timestamp - *last_timestamp >= 2 * PCD_DURATION)
+                        error_messages.push_back("pcd file " + num2str(pcd_count) + ".pcd may be wrong, skip a long time");
                     cloud.clear();
-                    f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << (*last_timestamp) << endl;
-
                     *last_timestamp = curr_timestamp;
                 }
             }
@@ -218,9 +232,14 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
                 pcd_count ++;
                 cout << "lidar " << pcd_count << ", points " << cloud.size() << endl;
                 pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
+                
+                f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << 
+                        (*last_timestamp) << ", points " << cloud.size() << endl;
+                if(cloud.size() < 15000)
+                    error_messages.push_back("pcd file " + num2str(pcd_count) + ".pcd may be wrong, point cloud too small");
+                if(curr_timestamp - *last_timestamp >= 2 * PCD_DURATION)
+                    error_messages.push_back("pcd file " + num2str(pcd_count) + ".pcd may be wrong, skip a long time");
                 cloud.clear();
-                f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << (*last_timestamp) << endl;
-
                 *last_timestamp = curr_timestamp;
             }
         } 
