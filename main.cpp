@@ -92,7 +92,6 @@ int main(int argc, char** argv)
         cout << "lidar " << pcd_count << ", points " << cloud.size() << endl;
         pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
         cloud.clear();
-        f_out << "pcd : " << pcd_count << ".pcd, time stamp : " <<  *(double*)(arg + sizeof(size_t)) << endl;
         f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << 
             *(double*)(arg + sizeof(size_t)) << ", points " << cloud.size() << endl;
         // 点云有时候不可靠，感觉像是LiDAR本身的问题，所以只能输出一下错误信息
