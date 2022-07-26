@@ -18,4 +18,4 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} 
                     ${PCL_LIBRARIES}
                     ${Boost_LIBRARIES}
-                    /usr/local/lib/libpcap.so)
+                    /usr/lib/x86_64-linux-gnu/libpcap.so)
