@@ -91,16 +91,20 @@ int main(int argc, char** argv)
         pcd_count++;
         cout << "lidar " << pcd_count << ", points " << cloud.size() << endl;
         pcl::io::savePCDFileASCII(output_folder + "/" + num2str(pcd_count) + ".pcd", cloud);
-        cloud.clear();
         f_out << fixed << setprecision(6) << "pcd : " << pcd_count << ".pcd, time stamp : " << 
             *(double*)(arg + sizeof(size_t)) << ", points " << cloud.size() << endl;
         // 点云有时候不可靠，感觉像是LiDAR本身的问题，所以只能输出一下错误信息
         if(cloud.size() < 15000)
             error_messages.push_back("pcd file " + num2str(pcd_count) + ".pcd may be wrong, point cloud too small");
+        cloud.clear();
+    }
+    
+    for(const string error : error_messages)
+    {
+        cout << error << endl;
+        f_out << error << endl;
     }
     f_out.close();
-    for(const string error : error_messages)
-        cout << error << endl;
     return 0;
 }
 
